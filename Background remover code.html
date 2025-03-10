@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Remover</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .dark {
+            color-scheme: dark;
+        }
+        .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #d1d1d1 25%, transparent 25%),
+                linear-gradient(-45deg, #d1d1d1 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #d1d1d1 75%),
+                linear-gradient(-45deg, transparent 75%, #d1d1d1 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        .dark .checkerboard {
+            background-image: 
+                linear-gradient(45deg, #333 25%, transparent 25%),
+                linear-gradient(-45deg, #333 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #333 75%),
+                linear-gradient(-45deg, transparent 75%, #333 75%);
+        }
+        #dropZone {
+            border: 2px dashed #ccc;
+        }
+        .dark #dropZone {
+            border: 2px dashed #555;
+        }
+        #dropZone.active {
+            border-color: #5D5CDE;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-primary">Background Remover</h1>
+            <p class="mt-2 text-gray-600 dark:text-gray-400">Upload an image to remove its background</p>
+        </header>
+
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 shadow-md mb-8">
+            <!-- Upload Section -->
+            <div id="uploadSection">
+                <div id="dropZone" class="relative flex flex-col items-center justify-center h-60 rounded-lg transition-all cursor-pointer hover:border-primary">
+                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/*">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p class="text-center text-gray-600 dark:text-gray-400">Drag and drop an image or click to browse</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Supported formats: JPG, PNG, WebP</p>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div id="previewSection" class="mt-6 hidden">
+                <h2 class="text-lg font-semibold mb-2">Image Preview</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Original Image</p>
+                        <div class="aspect-video bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center">
+                            <img id="imagePreview" class="max-w-full max-h-full object-contain" src="" alt="Preview">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center mt-4">
+                    <button id="resetButton" class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        Upload Different Image
+                    </button>
+                    <button id="processButton" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors flex items-center">
+                        <span>Remove Background</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultSection" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 shadow-md mb-8 hidden">
+            <h2 class="text-lg font-semibold mb-4">Result</h2>
+            <div id="loadingIndicator" class="flex flex-col items-center justify-center py-8 hidden">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+                <p class="text-gray-600 dark:text-gray-400">Removing background...</p>
+            </div>
+            <div id="resultContent" class="hidden">
+                <div class="checkerboard rounded-lg overflow-hidden flex items-center justify-center">
+                    <img id="resultImage" class="max-w-full max-h-[50vh] object-contain" src="" alt="Image with background removed">
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">
+                    You can right-click the image and select "Save image as..." to download it
+                </p>
+            </div>
+            <div id="errorContent" class="hidden">
+                <div class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg">
+                    <p id="errorMessage">An error occurred while processing your image.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 shadow-md">
+            <h2 class="text-lg font-semibold mb-2">How it works</h2>
+            <ol class="list-decimal pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+                <li>Upload an image using the area above</li>
+                <li>Click "Remove Background" to process your image</li>
+                <li>View and save your background-removed image</li>
+            </ol>
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                This app uses the @remove-background bot on Poe to process your images.
+                The resulting image will have a transparent background.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadSection = document.getElementById('uploadSection');
+        const previewSection = document.getElementById('previewSection');
+        const resultSection = document.getElementById('resultSection');
+        const processButton = document.getElementById('processButton');
+        const resetButton = document.getElementById('resetButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultContent = document.getElementById('resultContent');
+        const resultImage = document.getElementById('resultImage');
+        const errorContent = document.getElementById('errorContent');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Variables
+        let selectedFile = null;
+
+        // Event Listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+        processButton.addEventListener('click', processImage);
+        resetButton.addEventListener('click', resetUpload);
+
+        // Functions
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file && file.type.match('image.*')) {
+                displayPreview(file);
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.add('active');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.classList.remove('active');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.match('image.*')) {
+                fileInput.files = e.dataTransfer.files;
+                displayPreview(file);
+            }
+        }
+
+        function displayPreview(file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                previewSection.classList.remove('hidden');
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        function resetUpload() {
+            fileInput.value = '';
+            selectedFile = null;
+            imagePreview.src = '';
+            previewSection.classList.add('hidden');
+            resultSection.classList.add('hidden');
+        }
+
+        function processImage() {
+            if (!selectedFile) {
+                return;
+            }
+
+            // Show loading state
+            resultSection.classList.remove('hidden');
+            loadingIndicator.classList.remove('hidden');
+            resultContent.classList.add('hidden');
+            errorContent.classList.add('hidden');
+            processButton.disabled = true;
+            processButton.classList.add('opacity-50');
+
+            // Register handler for bot response
+            window.Poe.registerHandler("bg-removal-handler", (result) => {
+                const response = result.responses[0];
+                
+                if (response.status === "error") {
+                    showError(response.statusText || "An error occurred while processing your image.");
+                } else if (response.status === "complete") {
+                    // Check if we have an attachment
+                    if (response.attachments && response.attachments.length > 0) {
+                        const attachment = response.attachments[0];
+                        if (attachment.mimeType.startsWith('image/')) {
+                            showResult(attachment.url);
+                        } else {
+                            showError("The response did not contain a valid image.");
+                        }
+                    } else {
+                        showError("No image was returned. The background removal may have failed.");
+                    }
+                }
+                // We don't need to handle "incomplete" status as we're using stream=false
+            });
+
+            // Send the image to the bot
+            try {
+                window.Poe.sendUserMessage("@remove-background", {
+                    attachments: [selectedFile],
+                    handler: "bg-removal-handler",
+                    stream: false,
+                    openChat: false
+                }).catch(err => {
+                    showError(err.message || "Failed to send the image for processing.");
+                });
+            } catch (err) {
+                showError(err.message || "Failed to send the image for processing.");
+            }
+        }
+
+        function showResult(imageUrl) {
+            loadingIndicator.classList.add('hidden');
+            resultContent.classList.remove('hidden');
+            errorContent.classList.add('hidden');
+            resultImage.src = imageUrl;
+            processButton.disabled = false;
+            processButton.classList.remove('opacity-50');
+        }
+
+        function showError(message) {
+            loadingIndicator.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            errorContent.classList.remove('hidden');
+            errorMessage.textContent = message;
+            processButton.disabled = false;
+            processButton.classList.remove('opacity-50');
+        }
+    </script>
+</body>
+</html>
